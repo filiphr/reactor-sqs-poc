@@ -1,23 +1,21 @@
 package com.maciejwalkowiak.reactorsqs;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Stream;
-
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.containers.localstack.LocalStackContainer.Service;
-import org.testcontainers.lifecycle.Startables;
-
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.test.context.ContextConfiguration;
+import org.testcontainers.lifecycle.Startables;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.CreateQueueRequest;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Stream;
 
 @SpringBootTest
 @ContextConfiguration(initializers = AbstractIntegrationTest.Initializer.class)
@@ -27,14 +25,16 @@ abstract class AbstractIntegrationTest {
 	static class Initializer
 			implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-		static LocalStackContainer localstack = new LocalStackContainer().withServices(Service.SQS).withReuse(true);
+		static Aws2LocalstackContainer localstack = new Aws2LocalstackContainer().withServices("sqs").withReuse(true);
 
 		public static Map<String, String> getProperties() {
-			Startables.deepStart(Stream.of(localstack)).join();
+			localstack.start();
 
 			Map<String, String> properties = new HashMap<>();
 			properties.put("cloud.aws.sqs.default-listener.endpoint",
-					localstack.getEndpointOverride(Service.SQS).toString());
+					localstack.getEndpointOverride().toString());
+			properties.put("cloud.aws.sqs.default-listener.region",
+					localstack.getRegion());
 
 			return properties;
 		}
@@ -47,13 +47,14 @@ abstract class AbstractIntegrationTest {
 					(Map) getProperties()
 			));
 
-			logger.info("SQS exposed under {}", localstack.getEndpointOverride(Service.SQS));
+			logger.info("SQS exposed under {}", localstack.getEndpointOverride());
 
 			// create queues
-			AmazonSQS sqs = AmazonSQSClientBuilder
-					.standard()
-					.withEndpointConfiguration(localstack.getEndpointConfiguration(Service.SQS)).build();
-			sqs.createQueue("my-new-queue");
+			SqsClient sqs = SqsClient.builder()
+				.endpointOverride(localstack.getEndpointOverride())
+				.region(Region.of(localstack.getRegion()))
+				.build();
+			sqs.createQueue(CreateQueueRequest.builder().queueName("my-new-queue").build());
 		}
 	}
 }

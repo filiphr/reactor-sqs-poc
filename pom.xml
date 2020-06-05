@@ -56,15 +56,21 @@
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>localstack</artifactId>
+			<artifactId>testcontainers</artifactId>
 			<version>1.14.3</version>
 			<scope>test</scope>
 		</dependency>
-		<!-- AWS SDK v1 is required by Localstack -->
 		<dependency>
-			<groupId>com.amazonaws</groupId>
-			<artifactId>aws-java-sdk-sqs</artifactId>
-			<version>1.11.796</version>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>1.14.3</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>4.0.0</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
